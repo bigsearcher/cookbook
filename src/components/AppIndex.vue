@@ -4,7 +4,7 @@
 
 <script setup>
 import api from 'cookbook/js/api-interface';
-import { computed, getCurrentInstance, onMounted, ref, watch } from 'vue';
+import { computed, getCurrentInstance, markRaw, onMounted, ref, shallowRef, watch } from 'vue';
 
 import RecipeList from './List/RecipeList.vue';
 import { useStore } from '../store';
@@ -14,8 +14,12 @@ const store = useStore();
 /**
  * The known recipes in the cookbook
  * @type {import('vue').Ref<Array>}
+ *
+ * shallowRef + markRaw: Vue's reactive() wraps every object in a Proxy. For
+ * 30k+ recipes that freezes the browser. The list view never mutates
+ * individual recipe fields, only replaces the whole array.
  */
-const recipes = ref([]);
+const recipes = shallowRef([]);
 
 /**
  * If the list of recipes is currently being fetched from the server.
@@ -39,7 +43,7 @@ const loadAll = () => {
     api.recipes
         .getAll()
         .then((response) => {
-            recipes.value = response.data;
+            recipes.value = markRaw(response.data);
 
             // Always set page name last
             store.dispatch('setPage', { page: 'index' });

@@ -4,7 +4,7 @@
             <LoadingIndicator :delay="800" :size="40" />
         </div>
         <div v-else>
-            <div v-if="recipeObjects.length === 0">
+            <div v-if="visibleRecipes.length === 0">
                 <EmptyList />
             </div>
             <div v-else>
@@ -50,23 +50,29 @@
                         </template>
                     </NcButton>
                 </div>
-                <ul class="recipes">
-                    <li
-                        v-for="recipeObj in recipeObjects"
-                        v-show="recipeObj.show"
-                        :key="recipeObj.recipe.recipe_id"
-                    >
-                        <RecipeCard :recipe="recipeObj.recipe" />
-                    </li>
-                </ul>
+                <RecycleScroller
+                    page-mode
+                    class="recipes-virtual"
+                    :items="visibleRecipes"
+                    :item-size="130"
+                    :grid-items="gridItems"
+                    :item-secondary-size="332"
+                    key-field="recipe_id"
+                >
+                    <template #default="{ item }">
+                        <RecipeCard :recipe="item" />
+                    </template>
+                </RecycleScroller>
             </div>
         </div>
     </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import FilterIcon from 'vue-material-design-icons/FilterVariant.vue';
+import { RecycleScroller } from 'vue-virtual-scroller';
+import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
 
 import { NcButton } from '@nextcloud/vue';
 import { useIsMobile } from '../../composables/useIsMobile';
@@ -134,8 +140,26 @@ const orderBy = ref({
     order: 'ascending',
 });
 
+// Grid columns adapt to window width. RecipeCard cell = 300px + 2*1rem margin = 332px.
+// NC sidebar (navigation pane) takes ~300px when visible; account for it in available width.
+const ITEM_SECONDARY_SIZE = 332;
+const NC_SIDEBAR = 300;
+const calcGridItems = () =>
+    Math.max(
+        1,
+        Math.floor((window.innerWidth - NC_SIDEBAR) / ITEM_SECONDARY_SIZE),
+    );
+const gridItems = ref(calcGridItems());
+const onWindowResize = () => {
+    gridItems.value = calcGridItems();
+};
+
 onMounted(() => {
     store.dispatch('clearRecipeFilters');
+    window.addEventListener('resize', onWindowResize);
+});
+onBeforeUnmount(() => {
+    window.removeEventListener('resize', onWindowResize);
 });
 
 // ===================
@@ -154,7 +178,10 @@ function handleInlineControlsValueUpdated() {
  * descending
  */
 const sortRecipes = (recipes, recipeProperty, order) => {
-    const rec = JSON.parse(JSON.stringify(recipes));
+    // Shallow copy is sufficient — sort() needs a fresh array, but recipe
+    // objects themselves are not mutated. Deep JSON clone of 30k objects
+    // would freeze the browser for seconds.
+    const rec = recipes.slice();
     return rec.sort((r1, r2) => {
         if (order !== 'ascending' && order !== 'descending') return 0;
         if (order === 'ascending') {
@@ -241,44 +268,42 @@ const recipesDateModifiedDesc = computed(() =>
     sortRecipes(props.recipes, 'dateModified', 'descending'),
 );
 
-// An array of recipe objects of all recipes with links to the recipes and a property if the recipe is to be shown
-const recipeObjects = computed(() => {
-    function makeObject(rec) {
-        return {
-            recipe: rec,
-            show: filteredRecipes.value
-                .map((r) => r.recipe_id)
-                .includes(rec.recipe_id),
-        };
-    }
-
+// Pick the sorted variant matching the current orderBy selection.
+const sortedRecipes = computed(() => {
     if (
         orderBy.value === null ||
         orderBy.value === undefined ||
         (orderBy.value.order !== 'ascending' &&
             orderBy.value.order !== 'descending')
     ) {
-        return props.recipes.map(makeObject);
+        return props.recipes;
     }
     if (orderBy.value.recipeProperty === 'dateCreated') {
-        if (orderBy.value.order === 'ascending') {
-            return recipesDateCreatedAsc.value.map(makeObject);
-        }
-        return recipesDateCreatedDesc.value.map(makeObject);
+        return orderBy.value.order === 'ascending'
+            ? recipesDateCreatedAsc.value
+            : recipesDateCreatedDesc.value;
     }
     if (orderBy.value.recipeProperty === 'dateModified') {
-        if (orderBy.value.order === 'ascending') {
-            return recipesDateModifiedAsc.value.map(makeObject);
-        }
-        return recipesDateModifiedDesc.value.map(makeObject);
+        return orderBy.value.order === 'ascending'
+            ? recipesDateModifiedAsc.value
+            : recipesDateModifiedDesc.value;
     }
     if (orderBy.value.recipeProperty === 'name') {
-        if (orderBy.value.order === 'ascending') {
-            return recipesNameAsc.value.map(makeObject);
-        }
-        return recipesNameDesc.value.map(makeObject);
+        return orderBy.value.order === 'ascending'
+            ? recipesNameAsc.value
+            : recipesNameDesc.value;
     }
-    return props.recipes.map(makeObject);
+    return props.recipes;
+});
+
+// Final list passed to the virtualized scroller. We materialize the filter
+// match-set into a Set first; the original .map().includes() approach was
+// O(N²) and hung the browser for ~30s on 30k recipes before any DOM render.
+const visibleRecipes = computed(() => {
+    const filteredIds = new Set(
+        filteredRecipes.value.map((r) => r.recipe_id),
+    );
+    return sortedRecipes.value.filter((r) => filteredIds.has(r.recipe_id));
 });
 
 const showFiltersInRecipeList = computed(
@@ -326,5 +351,11 @@ export default {
     width: 100%;
     flex-direction: row;
     flex-wrap: wrap;
+}
+
+/* Virtualized scroller container. page-mode uses the document scrollbar,
+ * so we don't need a fixed height — items render inside the normal flow. */
+.recipes-virtual {
+    width: 100%;
 }
 </style>
