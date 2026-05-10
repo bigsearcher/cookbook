@@ -37,11 +37,11 @@
                         v-model="orderBy"
                         class="mr-4"
                         :title="t('cookbook', 'Show filter settings')"
-                        aria-label="t('cookbook', 'Show settings for filtering recipe list')"
+                        :aria-label="t('cookbook', 'Show settings for filtering recipe list')"
                     />
                     <NcButton
                         :type="'secondary'"
-                        aria-label="t('cookbook', 'Show settings for filtering recipe list')"
+                        :aria-label="t('cookbook', 'Show settings for filtering recipe list')"
                         :title="t('cookbook', 'Show filter settings')"
                         @click="toggleFilterControls"
                     >

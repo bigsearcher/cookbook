@@ -151,7 +151,7 @@
                                 v-if="scaledIngredients.length"
                                 class="copy-ingredients print-hidden"
                                 :type="'tertiary'"
-                                aria-label="t('cookbook', 'Copy ingredients to the clipboard')"
+                                :aria-label="t('cookbook', 'Copy ingredients to the clipboard')"
                                 :title="t('cookbook', 'Copy ingredients')"
                                 @click="copyIngredientsToClipboard"
                             >

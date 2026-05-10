@@ -103,7 +103,7 @@
                 {{ t('cookbook', 'Filter') }}
             </NcActionInput>
             <NcActionInput
-                aria-label="t('cookbook', 'Search recipes')"
+                :aria-label="t('cookbook', 'Search recipes')"
                 @submit="search"
             >
                 <template #icon>
