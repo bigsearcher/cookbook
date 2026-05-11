@@ -4,7 +4,7 @@
             <LoadingIndicator :delay="800" :size="40" />
         </div>
         <div v-else>
-            <div v-if="visibleRecipes.length === 0">
+            <div v-if="recipes.length === 0">
                 <EmptyList />
             </div>
             <div v-else>
