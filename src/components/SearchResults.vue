@@ -9,7 +9,14 @@
 </template>
 
 <script setup>
-import { markRaw, onActivated, onDeactivated, onMounted, ref, shallowRef } from 'vue';
+import {
+    markRaw,
+    onActivated,
+    onDeactivated,
+    onMounted,
+    ref,
+    shallowRef,
+} from 'vue';
 import { onBeforeRouteUpdate, useRoute } from 'vue-router/composables';
 import api from 'cookbook/js/api-interface';
 import helpers from 'cookbook/js/helper';

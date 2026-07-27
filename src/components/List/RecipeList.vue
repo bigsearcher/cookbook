@@ -37,11 +37,21 @@
                         v-model="orderBy"
                         class="mr-4"
                         :title="t('cookbook', 'Show filter settings')"
-                        :aria-label="t('cookbook', 'Show settings for filtering recipe list')"
+                        :aria-label="
+                            t(
+                                'cookbook',
+                                'Show settings for filtering recipe list',
+                            )
+                        "
                     />
                     <NcButton
                         :type="'secondary'"
-                        :aria-label="t('cookbook', 'Show settings for filtering recipe list')"
+                        :aria-label="
+                            t(
+                                'cookbook',
+                                'Show settings for filtering recipe list',
+                            )
+                        "
                         :title="t('cookbook', 'Show filter settings')"
                         @click="toggleFilterControls"
                     >
@@ -300,9 +310,7 @@ const sortedRecipes = computed(() => {
 // match-set into a Set first; the original .map().includes() approach was
 // O(N²) and hung the browser for ~30s on 30k recipes before any DOM render.
 const visibleRecipes = computed(() => {
-    const filteredIds = new Set(
-        filteredRecipes.value.map((r) => r.recipe_id),
-    );
+    const filteredIds = new Set(filteredRecipes.value.map((r) => r.recipe_id));
     return sortedRecipes.value.filter((r) => filteredIds.has(r.recipe_id));
 });
 

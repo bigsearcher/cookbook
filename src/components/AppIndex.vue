@@ -4,7 +4,15 @@
 
 <script setup>
 import api from 'cookbook/js/api-interface';
-import { computed, getCurrentInstance, markRaw, onMounted, ref, shallowRef, watch } from 'vue';
+import {
+    computed,
+    getCurrentInstance,
+    markRaw,
+    onMounted,
+    ref,
+    shallowRef,
+    watch,
+} from 'vue';
 
 import RecipeList from './List/RecipeList.vue';
 import { useLegacyStore } from '../store';
