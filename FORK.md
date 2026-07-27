@@ -4,11 +4,11 @@ This is a personal fork of [`nextcloud/cookbook`](https://github.com/nextcloud/c
 maintained at <https://github.com/bigsearcher/cookbook>. The default
 branch is upstream `master`; the patches live on the
 [`mkisel-patches`](https://github.com/bigsearcher/cookbook/tree/mkisel-patches)
-branch, rebased on top of upstream tags (currently `v0.11.6`).
+branch, rebased on top of upstream tags (currently `v0.11.9`).
 
 ## Why this fork exists
 
-Stock Cookbook v0.11.6 freezes the browser indefinitely on the
+Stock Cookbook freezes the browser indefinitely on the
 all-recipes view (`#/`) when the cookbook contains tens of thousands of
 recipes. My instance has ~30 750 imported recipes; the page never
 finishes rendering, even on a desktop with 32 GB RAM. The freeze starts
@@ -17,13 +17,36 @@ finishes rendering, even on a desktop with 32 GB RAM. The freeze starts
 Three independent performance issues compound. Each is fixed on this
 branch.
 
+## Upstream status
+
+The performance work is proposed upstream as
+[#3139](https://github.com/nextcloud/cookbook/pull/3139) and the backend
+image fix as [#3140](https://github.com/nextcloud/cookbook/pull/3140).
+Both are still open as of 2026-07-27, so this branch remains necessary.
+
+## Rebase history
+
+- `v0.11.6` — original branch point (2026-05-11)
+- `v0.11.9` — current base (2026-07-27). Upstream migrated Vuex → Pinia
+  and Webpack → Vite in between. The only conflict worth noting was the
+  store call in `RecipeList.vue`: `store.dispatch('clearRecipeFilters')`
+  became `legacyStore.clearRecipeFilters()`. Upstream independently
+  applied the same `aria-label` binding fix carried here.
+  The pre-rebase state is preserved as branch `mkisel-patches-0.11.6`.
+
+Because upstream now builds with Vite, a deployment must ship **both**
+`js/` and `css/` — stylesheets are emitted as separate hashed chunks
+(including `vue-recycle-scroller`'s own CSS). Shipping only `js/` leaves
+the chunk hashes inconsistent.
+
 ## What the patches change
 
-All changes are confined to three Vue components in `src/`. The PHP
-backend, `appinfo/routes.php`, the REST API at `/apps/cookbook/api/v1/*`
-and the JSON shape of every response are **untouched** — mobile clients
-(iOS / Android Cookbook apps) and any third-party API consumers see an
-identical server.
+The frontend changes are confined to three Vue components in `src/`.
+`appinfo/routes.php`, the REST API at `/apps/cookbook/api/v1/*` and the
+JSON shape of every response are **untouched** — mobile clients (iOS /
+Android Cookbook apps) and any third-party API consumers see an
+identical server. One PHP change exists (see "Backend" below); it only
+rewrites a field inside the stored `recipe.json`.
 
 ### 1. Recipes are no longer made deeply reactive
 
@@ -125,12 +148,32 @@ npm install   # ~1700 transitive deps; pause Nextcloud desktop sync first
 npm run build # ~20 s; output in js/
 ```
 
-Then copy `js/*` into `/var/www/nextcloud/apps/cookbook/js/`, `chown
-www-data:www-data`, and **bump `<version>` in
-`appinfo/info.xml`** followed by `sudo -u www-data php occ upgrade`.
-Without the version bump Nextcloud keeps the old `?v=…` cache-busting
-hash on `<script src=…>` and browsers serve the previous bundle from
-disk cache.
+Run `rm -rf js css` before the final build, otherwise stale hashed
+chunks from an earlier build ship alongside the current ones.
+
+Then copy `js/*` **and** `css/*` into
+`/var/www/nextcloud/apps/cookbook/`, plus `lib/Service/RecipeService.php`
+for the backend change, `chown www-data:www-data`, and **bump
+`<version>` in `appinfo/info.xml`** followed by
+`sudo -u www-data php occ upgrade`. Without the version bump Nextcloud
+keeps the old `?v=…` cache-busting hash on `<script src=…>` and browsers
+serve the previous bundle from disk cache.
+
+Set the version *above* the released upstream one it is based on
+(e.g. `0.11.9.1` on top of `0.11.9`). Otherwise the appstore entry looks
+newer, and the next `occ app:update` silently replaces this build with
+stock upstream — which is exactly how the fork was lost between
+2026-05 and 2026-07.
+
+## Backend
+
+`lib/Service/RecipeService.php` — after `imageService->setImageData()`
+writes the downloaded image, the external URL left in `$json['image']`
+is replaced with the user-relative path to the local `full.jpg` and
+`recipe.json` is re-saved. Without it the edit form shows the source URL
+and any field mutation triggers a re-download. The frontend renders
+`imageUrl` via the `cookbook.recipe.image` API route rather than this
+field, so the change is about JSON consistency, not rendering.
 
 ## Trade-offs and known regressions
 
