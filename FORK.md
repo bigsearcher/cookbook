@@ -2,9 +2,11 @@
 
 This is a personal fork of [`nextcloud/cookbook`](https://github.com/nextcloud/cookbook)
 maintained at <https://github.com/bigsearcher/cookbook>. The default
-branch is upstream `master`; the patches live on the
-[`mkisel-patches`](https://github.com/bigsearcher/cookbook/tree/mkisel-patches)
-branch, rebased on top of upstream tags (currently `v0.11.11`).
+branch is upstream `master`. The patches live on one branch per upstream
+base, so a port never rewrites published history: the current one is
+[`mkisel-patches-v0.11.11`](https://github.com/bigsearcher/cookbook/tree/mkisel-patches-v0.11.11).
+`mkisel-patches` (and its copy `mkisel-patches-0.11.9`) is the v0.11.9
+base, `mkisel-patches-0.11.6` the original one.
 
 ## Why this fork exists
 
@@ -52,8 +54,8 @@ Virtualization: [#3139](https://github.com/nextcloud/cookbook/pull/3139)
 ## Rebase history
 
 - `v0.11.6` — original branch point (2026-05-11)
-- `v0.11.9` — 2026-07-27 (Vuex → Pinia, Webpack → Vite). Kept as branch
-  `mkisel-patches-0.11.9`.
+- `v0.11.9` — 2026-07-27 (Vuex → Pinia, Webpack → Vite). Branches
+  `mkisel-patches` / `mkisel-patches-0.11.9`.
 - `v0.11.11` — 2026-10-13. Upstream moved to **Vue 3** (`@nextcloud/vue` 9,
   Pinia 4, vue-router 4) in 0.11.10, so the virtualization was re-done
   for `vue-virtual-scroller` 3.x rather than rebased.
