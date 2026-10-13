@@ -35,11 +35,15 @@ SPDX-License-Identifier: AGPL-3.0-only OR AGPL-3.0-or-later
                 v-model:value="orderBy"
                 class="mr-4"
                 :title="t('cookbook', 'Show filter settings')"
-                aria-label="t('cookbook', 'Show settings for filtering recipe list')"
+                :aria-label="
+                    t('cookbook', 'Show settings for filtering recipe list')
+                "
             />
             <NcButton
                 :variant="'secondary'"
-                aria-label="t('cookbook', 'Show settings for filtering recipe list')"
+                :aria-label="
+                    t('cookbook', 'Show settings for filtering recipe list')
+                "
                 :title="t('cookbook', 'Show filter settings')"
                 @click="toggleFilterControlsModalVisible"
             >

@@ -97,7 +97,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR AGPL-3.0-or-later
             :primary="true"
         >
             <NcActionInput
-                aria-label="t('cookbook', 'Search recipes')"
+                :aria-label="t('cookbook', 'Search recipes')"
                 @submit="search"
             >
                 <template #icon>

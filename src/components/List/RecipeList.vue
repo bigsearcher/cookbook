@@ -30,22 +30,33 @@ SPDX-License-Identifier: AGPL-3.0-only OR AGPL-3.0-or-later
                     :is-loading="loading"
                     :is-visible="isFilterControlsVisible"
                 />
-                <ul class="recipes">
-                    <li
-                        v-for="recipeObj in recipeObjects"
-                        v-show="recipeObj.show"
-                        :key="recipeObj.recipe.recipe_id"
-                    >
-                        <RecipeCard :recipe="recipeObj.recipe" />
-                    </li>
-                </ul>
+                <!--
+                    Virtualized: one v-show'd <li> per recipe put every card
+                    in the DOM - 30k nodes froze the browser on large
+                    libraries. Only the visible rows are rendered now.
+                -->
+                <RecycleScroller
+                    page-mode
+                    class="recipes-virtual"
+                    :items="visibleRecipes"
+                    :item-size="ITEM_SIZE"
+                    :grid-items="gridItems"
+                    :item-secondary-size="ITEM_SECONDARY_SIZE"
+                    key-field="recipe_id"
+                >
+                    <template #default="{ item }">
+                        <RecipeCard :recipe="item" />
+                    </template>
+                </RecycleScroller>
             </div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { RecycleScroller } from 'vue-virtual-scroller';
+import 'vue-virtual-scroller/index.css';
 import { useLegacyStore } from '../../store';
 import applyRecipeFilters from '../../js/utils/applyRecipeFilters';
 import {
@@ -92,6 +103,27 @@ const filterKeywordsTypeUseAnd = ref(true);
  * @type {import('vue').Ref<boolean>}
  */
 const isFilterControlsVisible = ref(false);
+
+// Grid geometry for the virtual scroller. A RecipeCard is 300px wide with a
+// 1rem side margin (332px per column) and 105px tall plus 0.5rem/1rem
+// vertical margin (~130px per row). Columns follow the window width minus
+// the Nextcloud navigation pane (~300px).
+const ITEM_SIZE = 130;
+const ITEM_SECONDARY_SIZE = 332;
+const NC_NAVIGATION_WIDTH = 300;
+const calcGridItems = () =>
+    Math.max(
+        1,
+        Math.floor(
+            (window.innerWidth - NC_NAVIGATION_WIDTH) / ITEM_SECONDARY_SIZE,
+        ),
+    );
+const gridItems = ref(calcGridItems());
+const onWindowResize = () => {
+    gridItems.value = calcGridItems();
+};
+onMounted(() => window.addEventListener('resize', onWindowResize));
+onBeforeUnmount(() => window.removeEventListener('resize', onWindowResize));
 
 const orderBy = ref({
     label: t('cookbook', 'Name'),
@@ -268,6 +300,13 @@ const recipeObjects = computed(() => {
     }
     return props.recipes.map(makeObject);
 });
+
+// What the virtual scroller renders: the sorted recipes the filters let
+// through. EmptyList stays gated on recipeObjects (all recipes), so a filter
+// matching nothing keeps the filter controls on screen.
+const visibleRecipes = computed(() =>
+    recipeObjects.value.filter((o) => o.show).map((o) => o.recipe),
+);
 
 const showFiltersInRecipeList = computed(
     () => legacyStore.localSettings.showFiltersInRecipeList,

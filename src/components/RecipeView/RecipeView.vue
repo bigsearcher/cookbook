@@ -158,7 +158,12 @@ SPDX-License-Identifier: AGPL-3.0-only OR AGPL-3.0-or-later
                                 v-if="scaledIngredients.length"
                                 class="copy-ingredients print-hidden"
                                 variant="tertiary"
-                                aria-label="t('cookbook', 'Copy ingredients to the clipboard')"
+                                :aria-label="
+                                    t(
+                                        'cookbook',
+                                        'Copy ingredients to the clipboard',
+                                    )
+                                "
                                 :title="t('cookbook', 'Copy ingredients')"
                                 @click="copyIngredientsToClipboard"
                             >
