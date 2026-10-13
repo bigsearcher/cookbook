@@ -29,9 +29,9 @@ list is replaced by `<RecycleScroller>` from
 [`vue-virtual-scroller`](https://github.com/Akryum/vue-virtual-scroller)
 **3.x** (Vue 3) in `page-mode` + grid mode, fed by `visibleRecipes`
 (the sorted recipes the filters let through). Only the visible rows are
-in the DOM. Card cell = 332 × 130 px (300 px card + 1rem side margins;
-105 px + vertical margins); columns = `floor((innerWidth − 300) / 332)`,
-recomputed on `resize`. `EmptyList` stays gated on the full list, so a
+in the DOM. The grid is measured, not assumed: the cell is the first
+rendered card plus its margins, the column count is the list's own width
+(`ResizeObserver`) over the cell width. `EmptyList` stays gated on the full list, so a
 filter that matches nothing keeps the filter controls on screen.
 
 Also: four `aria-label="t(...)"` attributes are bound (`:aria-label`) —
@@ -72,14 +72,12 @@ and `appinfo/info.xml`, `chown -R www-data:www-data`, then
 `sudo -u www-data php occ upgrade`.
 
 The version is set **above** the upstream release it is based on
-(`0.11.11.1` on `0.11.11`). Otherwise the appstore entry looks newer and
+(`0.11.11.x` on `0.11.11`). Otherwise the appstore entry looks newer and
 the next `occ app:update` silently replaces this build with stock
 upstream — which is how the fork was lost twice (2026-05, 2026-10).
 
 ## Trade-offs
 
-- Columns are a fixed integer recomputed only on `resize` (no CSS
-  flex-wrap snapping).
-- Card height is fixed at 130 px; a taller card variant needs `ITEM_SIZE`
-  bumped.
+- All cards must share one size (the scroller uses one cell size); today's
+  RecipeCard has a fixed height.
 - The full recipe list still comes over the wire in one response.

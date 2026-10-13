@@ -35,26 +35,30 @@ SPDX-License-Identifier: AGPL-3.0-only OR AGPL-3.0-or-later
                     in the DOM - 30k nodes froze the browser on large
                     libraries. Only the visible rows are rendered now.
                 -->
-                <RecycleScroller
-                    page-mode
-                    class="recipes-virtual"
-                    :items="visibleRecipes"
-                    :item-size="ITEM_SIZE"
-                    :grid-items="gridItems"
-                    :item-secondary-size="ITEM_SECONDARY_SIZE"
-                    key-field="recipe_id"
-                >
-                    <template #default="{ item }">
-                        <RecipeCard :recipe="item" />
-                    </template>
-                </RecycleScroller>
+                <div ref="listEl">
+                    <RecycleScroller
+                        page-mode
+                        class="recipes-virtual"
+                        :items="visibleRecipes"
+                        :item-size="cellHeight"
+                        :grid-items="gridItems"
+                        :item-secondary-size="cellWidth"
+                        key-field="recipe_id"
+                        emit-update
+                        @update="measureCell"
+                    >
+                        <template #default="{ item }">
+                            <RecipeCard :recipe="item" />
+                        </template>
+                    </RecycleScroller>
+                </div>
             </div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { RecycleScroller } from 'vue-virtual-scroller';
 import 'vue-virtual-scroller/index.css';
 import { useLegacyStore } from '../../store';
@@ -104,26 +108,49 @@ const filterKeywordsTypeUseAnd = ref(true);
  */
 const isFilterControlsVisible = ref(false);
 
-// Grid geometry for the virtual scroller. A RecipeCard is 300px wide with a
-// 1rem side margin (332px per column) and 105px tall plus 0.5rem/1rem
-// vertical margin (~130px per row). Columns follow the window width minus
-// the Nextcloud navigation pane (~300px).
-const ITEM_SIZE = 130;
-const ITEM_SECONDARY_SIZE = 332;
-const NC_NAVIGATION_WIDTH = 300;
-const calcGridItems = () =>
-    Math.max(
-        1,
-        Math.floor(
-            (window.innerWidth - NC_NAVIGATION_WIDTH) / ITEM_SECONDARY_SIZE,
-        ),
+// Grid geometry for the virtual scroller, measured instead of assumed: a cell
+// is a rendered card plus its margins, the column count is the list's own
+// width over the cell width. The initial values (today's RecipeCard: 300px
+// + 2 × 1rem wide, 105px + 1.5rem tall) only last until the first card is
+// laid out.
+const listEl = ref<HTMLElement | null>(null);
+const cellWidth = ref(332);
+const cellHeight = ref(130);
+const listWidth = ref(0);
+const gridItems = computed(() =>
+    Math.max(1, Math.floor(listWidth.value / cellWidth.value)),
+);
+
+function measureCell() {
+    const card = listEl.value?.querySelector<HTMLElement>('.recipe-card');
+    if (!card) return;
+    const css = getComputedStyle(card);
+    const width = Math.round(
+        card.offsetWidth +
+            parseFloat(css.marginLeft) +
+            parseFloat(css.marginRight),
     );
-const gridItems = ref(calcGridItems());
-const onWindowResize = () => {
-    gridItems.value = calcGridItems();
-};
-onMounted(() => window.addEventListener('resize', onWindowResize));
-onBeforeUnmount(() => window.removeEventListener('resize', onWindowResize));
+    const height = Math.round(
+        card.offsetHeight +
+            parseFloat(css.marginTop) +
+            parseFloat(css.marginBottom),
+    );
+    if (width > 0) cellWidth.value = width;
+    if (height > 0) cellHeight.value = height;
+}
+
+const resizeObserver = new ResizeObserver(([entry]) => {
+    listWidth.value = entry.contentRect.width;
+});
+watch(
+    listEl,
+    (el, old) => {
+        if (old) resizeObserver.unobserve(old);
+        if (el) resizeObserver.observe(el);
+    },
+    { flush: 'post' },
+);
+onBeforeUnmount(() => resizeObserver.disconnect());
 
 const orderBy = ref({
     label: t('cookbook', 'Name'),
